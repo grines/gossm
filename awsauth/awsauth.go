@@ -73,7 +73,7 @@ type Signer struct {
 	UnsignedPayload bool
 }
 
-func buildRequestWithBodyReader(serviceName, region string, body io.Reader) (*http.Request, io.ReadSeeker) {
+func buildRequestWithBodyReader(serviceName, region string, body io.Reader, amztarget string) (*http.Request, io.ReadSeeker) {
 	var bodyLen int
 
 	type lenner interface {
@@ -85,7 +85,7 @@ func buildRequestWithBodyReader(serviceName, region string, body io.Reader) (*ht
 
 	endpoint := "https://" + serviceName + "." + region + ".amazonaws.com"
 	req, _ := http.NewRequest("POST", endpoint, body)
-	req.Header.Set("X-Amz-Target", "EC2WindowsMessageDeliveryService.GetMessages")
+	req.Header.Set("X-Amz-Target", amztarget)
 	req.Header.Set("Content-Type", "application/x-amz-json-1.1")
 
 	if bodyLen > 0 {
@@ -102,9 +102,9 @@ func buildRequestWithBodyReader(serviceName, region string, body io.Reader) (*ht
 	return req, seeker
 }
 
-func BuildRequest(serviceName, region, body string) (*http.Request, io.ReadSeeker) {
+func BuildRequest(serviceName, region, body string, amztarget string) (*http.Request, io.ReadSeeker) {
 	reader := strings.NewReader(body)
-	return buildRequestWithBodyReader(serviceName, region, reader)
+	return buildRequestWithBodyReader(serviceName, region, reader, amztarget)
 }
 
 func BuildSigner(access string, secret string, session string) Signer {

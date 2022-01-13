@@ -61,7 +61,7 @@ func GetRoleTokenFromRSA(managedInstanceID string, publicKey string) awsrsa.AwsT
 }
 
 func GetRunCommandMessages(tokens awsrsa.AwsToken, managedInstanceID string) awsrsa.DocMessage {
-	req, body := awsauth.BuildRequest("ec2messages", "us-east-1", `{"Destination":"`+managedInstanceID+`","MessagesRequestId":"`+awsrsa.UniqueID()+`","VisibilityTimeoutInSeconds":10}`)
+	req, body := awsauth.BuildRequest("ec2messages", "us-east-1", `{"Destination":"`+managedInstanceID+`","MessagesRequestId":"`+awsrsa.UniqueID()+`","VisibilityTimeoutInSeconds":10}`, "EC2WindowsMessageDeliveryService.GetMessages")
 
 	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
 	signer.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
@@ -74,4 +74,37 @@ func GetRunCommandMessages(tokens awsrsa.AwsToken, managedInstanceID string) aws
 	var data awsrsa.DocMessage
 	decoder.Decode(&data)
 	return data
+}
+
+func SendCommandOutput(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string, cmdOutput string) string {
+	req, body := awsauth.BuildRequest("ec2messages", "us-east-1", `{"MessageId":"aws.ssm.`+cmdID+`.`+managedInstanceID+`","Payload":"{\"additionalInfo\":{\"agent\":{\"lang\":\"en-US\",\"name\":\"amazon-ssm-agent\",\"os\":\"\",\"osver\":\"1\",\"ver\":\"3.1.0.0\"},\"dateTime\":\"2022-01-13T00:30:25.818Z\",\"runId\":\"\",\"runtimeStatusCounts\":{\"Success\":1}},\"documentStatus\":\"Success\",\"documentTraceOutput\":\"\",\"runtimeStatus\":{\"aws:runShellScript\":{\"status\":\"Success\",\"code\":0,\"name\":\"aws:runShellScript\",\"output\":\"`+cmdOutput+`\\n\",\"startDateTime\":\"2022-01-13T00:30:25.268Z\",\"endDateTime\":\"2022-01-13T00:30:25.385Z\",\"outputS3BucketName\":\"\",\"outputS3KeyPrefix\":\"\",\"stepName\":\"\",\"standardOutput\":\"`+cmdOutput+`\\n\",\"standardError\":\"\"}}}","ReplyId":"`+awsrsa.UniqueID()+`"}`, "EC2WindowsMessageDeliveryService.SendReply")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data awsrsa.DocMessage
+	decoder.Decode(&data)
+	return "OK"
+}
+
+func AcknowledgeCommand(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string) string {
+	req, body := awsauth.BuildRequest("ec2messages", "us-east-1", `{"MessageId":"aws.ssm.`+cmdID+`.`+managedInstanceID+`"}`, "EC2WindowsMessageDeliveryService.AcknowledgeMessage")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data awsrsa.DocMessage
+	decoder.Decode(&data)
+	return "OK"
+
 }
