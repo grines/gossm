@@ -30,6 +30,19 @@ type AwsToken struct {
 	UpdateKeyPair       bool   `json:"UpdateKeyPair"`
 }
 
+type DocMessage struct {
+	Destination string `json:"Destination"`
+	Messages    []struct {
+		CreatedDate   time.Time `json:"CreatedDate"`
+		Destination   string    `json:"Destination"`
+		MessageID     string    `json:"MessageId"`
+		Payload       string    `json:"Payload"`
+		PayloadDigest string    `json:"PayloadDigest"`
+		Topic         string    `json:"Topic"`
+	} `json:"Messages"`
+	MessagesRequestID string `json:"MessagesRequestId"`
+}
+
 func UniqueID() string {
 	uuid := make([]byte, 16)
 	io.ReadFull(rand.Reader, uuid)
@@ -54,27 +67,6 @@ func BuildRsaSigner(managedInstanceID string, publicKey string, amzTarget string
 		ServiceName: serviceName,
 		Region:      region,
 		Credentials: credentials.NewStaticCredentials(managedInstanceID, publicKey, ""),
-	}
-}
-
-func BuildRsaSigner2(accesskey string, secretkey string, sessiontoken string, amzTarget string, serviceName string, region string, signTime time.Time, expireTime time.Duration, body string) signer {
-
-	endpoint := "https://" + serviceName + "." + region + ".amazonaws.com"
-	reader := strings.NewReader(body)
-	req, _ := http.NewRequest("POST", endpoint, reader)
-	req.Header.Add("X-Amz-Target", amzTarget)
-	req.Header.Add("Content-Type", "application/x-amz-json-1.1")
-	req.Header.Add("Content-Length", fmt.Sprint(len(body)))
-
-	return signer{
-		Request:     req,
-		Time:        signTime,
-		ExpireTime:  expireTime,
-		Query:       req.URL.Query(),
-		Body:        reader,
-		ServiceName: serviceName,
-		Region:      region,
-		Credentials: credentials.NewStaticCredentials(accesskey, secretkey, sessiontoken),
 	}
 }
 
