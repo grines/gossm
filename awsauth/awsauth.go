@@ -36,7 +36,7 @@ func UniqueID() string {
 	return fmt.Sprintf("%x", uuid)
 }
 
-func buildRsaSigner(amzTarget string, serviceName string, region string, signTime time.Time, expireTime time.Duration, body string) signer {
+func BuildRsaSigner(managedInstanceID string, publicKey string, amzTarget string, serviceName string, region string, signTime time.Time, expireTime time.Duration, body string) signer {
 
 	endpoint := "https://" + serviceName + "." + region + ".amazonaws.com"
 	reader := strings.NewReader(body)
@@ -57,7 +57,7 @@ func buildRsaSigner(amzTarget string, serviceName string, region string, signTim
 	}
 }
 
-func buildRsaSigner2(accesskey string, secretkey string, sessiontoken string, amzTarget string, serviceName string, region string, signTime time.Time, expireTime time.Duration, body string) signer {
+func BuildRsaSigner2(accesskey string, secretkey string, sessiontoken string, amzTarget string, serviceName string, region string, signTime time.Time, expireTime time.Duration, body string) signer {
 
 	endpoint := "https://" + serviceName + "." + region + ".amazonaws.com"
 	reader := strings.NewReader(body)
@@ -109,11 +109,11 @@ func SignRsa(req *request.Request) {
 		notHoist:    req.NotHoist,
 	}
 
-	req.Error = s.signRsa()
+	req.Error = s.SignRsa()
 	req.SignedHeaderVals = s.signedHeaderVals
 }
 
-func (v4 *signer) signRsa() error {
+func (v4 *signer) SignRsa() error {
 	if v4.ExpireTime != 0 {
 		v4.isPresign = true
 	}
@@ -806,12 +806,12 @@ func buildRequestWithBodyReader(serviceName, region string, body io.Reader) (*ht
 	return req, seeker
 }
 
-func buildRequest(serviceName, region, body string) (*http.Request, io.ReadSeeker) {
+func BuildRequest(serviceName, region, body string) (*http.Request, io.ReadSeeker) {
 	reader := strings.NewReader(body)
 	return buildRequestWithBodyReader(serviceName, region, reader)
 }
 
-func buildSigner(access string, secret string, session string) Signer {
+func BuildSigner(access string, secret string, session string) Signer {
 	return Signer{
 		Credentials: credentials.NewStaticCredentials(access, secret, session),
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/grines/ssmmm/awsauth"
 )
 
 const managedInstanceID string = "mi-0d416eb76fdc3f731"
@@ -12,9 +14,8 @@ const publicKey string = "MIIEowIBAAKCAQEAwCWYd69ADZjlmqvP+NtnWQi82cq+TmpHMlvNzH
 const fingerPrint string = "90312ec8-c247-47eb-823f-ad6e8ae1fff5"
 
 func main() {
-	signer := awsauth.BuildRsaSigner("AmazonSSM.RequestManagedInstanceRoleToken", "ssm", "us-east-1", time.Now(), 0, `{"Fingerprint":"90312ec8-c247-47eb-823f-ad6e8ae1fff5"}`)
-	signer.signRsa()
-	//fmt.Println(signer.Request.Header)
+	signer := awsauth.BuildRsaSigner(managedInstanceID, publicKey, "AmazonSSM.RequestManagedInstanceRoleToken", "ssm", "us-east-1", time.Now(), 0, `{"Fingerprint":"90312ec8-c247-47eb-823f-ad6e8ae1fff5"}`)
+	signer.SignRsa()
 
 	client := &http.Client{}
 	resp, _ := client.Do(signer.Request)
@@ -24,25 +25,12 @@ func main() {
 	var data awsauth.AwsToken
 	err := decoder.Decode(&data)
 	if err != nil {
-		fmt.Println(data.AccessKeyID)
-		fmt.Println(data.SecretAccessKey)
-		fmt.Println(data.SessionToken)
+		fmt.Println("Got Token.")
 	}
-	fmt.Println("-----")
 
-	//signer2 := buildRsaSigner2(data.AccessKeyID, data.SecretAccessKey, data.SessionToken, "EC2WindowsMessageDeliveryService.GetMessages", "ec2messages", "us-east-1", time.Now(), 0, `{"Destination":"mi-0d416eb76fdc3f731","MessagesRequestId":"9e5e63b7-87a4-47e4-afaa-6ff7864351fa","VisibilityTimeoutInSeconds":10}`)
-	//signer2.signRsa()
-	//fmt.Println(signer.Request.Header)
+	req, body := awsauth.BuildRequest("ec2messages", "us-east-1", `{"Destination":"`+managedInstanceID+`","MessagesRequestId":"`+awsauth.UniqueID()+`","VisibilityTimeoutInSeconds":10}`)
 
-	//client2 := &http.Client{}
-	//resp2, _ := client2.Do(signer2.Request)
-	//defer resp2.Body.Close()
-
-	//uuid := protocol.UUIDVersion4(make([]byte, 16))
-
-	req, body := buildRequest("ec2messages", "us-east-1", `{"Destination":"mi-0d416eb76fdc3f731","MessagesRequestId":"`+UniqueID()+`","VisibilityTimeoutInSeconds":10}`)
-
-	signer3 := buildSigner(data.AccessKeyID, data.SecretAccessKey, data.SessionToken)
+	signer3 := awsauth.BuildSigner(data.AccessKeyID, data.SecretAccessKey, data.SessionToken)
 	header, err := signer3.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
 
 	fmt.Println(header)
