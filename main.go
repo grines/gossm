@@ -20,7 +20,7 @@ func main() {
 
 	for {
 		//Need some custome jitter here
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 
 		//Get Service Role Token from RSA private key
 		tokens := awsssm.GetRoleTokenFromRSA(managedInstanceID, publicKey)
