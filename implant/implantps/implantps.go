@@ -3,7 +3,7 @@ package implantps
 import (
 	"fmt"
 
-	"github.com/mitchellh/go-ps"
+	"github.com/keybase/go-ps"
 )
 
 func Ps() []string {
@@ -13,7 +13,8 @@ func Ps() []string {
 	for x := range processList {
 		var process ps.Process
 		process = processList[x]
-		data := fmt.Sprintf("%d\t%s\n", process.Pid(), process.Executable())
+		//path, _ := process.Path()
+		data := fmt.Sprintf("%d\t%d\t%s", process.Pid(), process.PPid(), process.Executable())
 		processes = append(processes, data)
 
 	}
