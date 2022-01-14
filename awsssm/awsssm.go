@@ -3,7 +3,6 @@ package awsssm
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -58,7 +57,6 @@ func GetRoleTokenFromRSA(managedInstanceID string, publicKey string) awsrsa.AwsT
 	var data awsrsa.AwsToken
 	err := decoder.Decode(&data)
 	if err != nil {
-		fmt.Println("Got Token.")
 	}
 	return data
 }

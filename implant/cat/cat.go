@@ -11,6 +11,5 @@ func Cat(filename string) string {
 		fmt.Println("File reading error", err)
 		return "Error reading file " + filename
 	}
-	fmt.Println("Contents of file:", string(data))
 	return string(data)
 }
