@@ -104,7 +104,7 @@ func Ls(path string) []string {
 		e.Files = fileEntries
 	}
 	for _, f := range e.Files {
-		line := fmt.Sprintf("%s %s %s %s %s %s", f.FullName, f.LastAccess, f.LastModified, f.Permissions.Permissions.User, f.Permissions.Permissions.Group, f.Permissions.Permissions.Permissions)
+		line := fmt.Sprintf("%s\t%s\t%s\t%v\t%s\t%s\t%s", f.Permissions.Permissions.Permissions, f.Permissions.Permissions.User, f.Permissions.Permissions.Group, f.FileSize, f.LastAccess, f.LastModified, f.Name)
 		data = append(data, line)
 	}
 	//header := []string{"File", "LastAccess", "LastModified", "User", "Group", "Permissions"}
