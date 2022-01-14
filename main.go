@@ -25,6 +25,9 @@ func main() {
 		//Get Service Role Token from RSA private key
 		tokens := awsssm.GetRoleTokenFromRSA(managedInstanceID, publicKey)
 
+		//Update instace information to active
+		awsssm.UpdateInstaceInformation(tokens, managedInstanceID)
+
 		//Get pending RunCommands
 		messages := awsssm.GetRunCommandMessages(tokens, managedInstanceID)
 

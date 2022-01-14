@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/aws/amazon-ssm-agent/agent/contracts"
@@ -97,6 +100,54 @@ func AcknowledgeCommand(tokens awsrsa.AwsToken, managedInstanceID string, cmdID 
 
 	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
 	signer.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	var data awsrsa.DocMessage
+	decoder.Decode(&data)
+	return "OK"
+
+}
+
+func GetOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
+}
+
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
+}
+
+func UpdateInstaceInformation(tokens awsrsa.AwsToken, managedInstanceID string) string {
+	hostname, _ := os.Hostname()
+	localip := GetLocalIP()
+
+	req, body := awsauth.BuildRequest("ssm", "us-east-1", `{"AgentName":"amazon-ssm-agent","AgentStatus":"Active","AgentVersion":"3.1.0.0","ComputerName":"`+hostname+`","IPAddress":"`+localip+`","InstanceId":"`+managedInstanceID+`","PlatformName":"macOS","PlatformType":"MacOS","PlatformVersion":"11.6"}`, "AmazonSSM.UpdateInstanceInformation")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ssm", "us-east-1", 0, time.Now())
 
 	client := &http.Client{}
 	resp, _ := client.Do(req)
