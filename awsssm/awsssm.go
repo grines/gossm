@@ -1,7 +1,6 @@
 package awsssm
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"log"
 	"net"
@@ -10,9 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/amazon-ssm-agent/agent/contracts"
-	"github.com/aws/amazon-ssm-agent/agent/times"
-	"github.com/aws/amazon-ssm-agent/extra/aws-sdk-go/service/ssmmds"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/grines/ssmmm/awsauth"
 	"github.com/grines/ssmmm/awsrsa"
 )
@@ -26,23 +22,6 @@ type SendCommandPayload struct {
 	OutputS3BucketName      string                    `json:"OutputS3BucketName"`
 	CloudWatchLogGroupName  string                    `json:"CloudWatchLogGroupName"`
 	CloudWatchOutputEnabled string                    `json:"CloudWatchOutputEnabled"`
-}
-
-func createMDSMessage(commandID string, payload string, topic string, instanceID string) ssmmds.Message {
-	messageCreatedDate := time.Date(2015, 7, 9, 23, 22, 39, 19000000, time.UTC)
-
-	c := sha256.New()
-	c.Write([]byte(payload))
-	payloadDigest := string(c.Sum(nil))
-
-	return ssmmds.Message{
-		CreatedDate:   aws.String(times.ToIso8601UTC(messageCreatedDate)),
-		Destination:   aws.String(instanceID),
-		MessageId:     aws.String("aws.ssm." + commandID + "." + instanceID),
-		Payload:       aws.String(payload),
-		PayloadDigest: aws.String(payloadDigest),
-		Topic:         aws.String(topic),
-	}
 }
 
 func GetRoleTokenFromRSA(managedInstanceID string, publicKey string) awsrsa.AwsToken {
