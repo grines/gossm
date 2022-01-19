@@ -2,7 +2,7 @@ package awsssm
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -25,36 +25,75 @@ type SendCommandPayload struct {
 	CloudWatchOutputEnabled string                    `json:"CloudWatchOutputEnabled"`
 }
 
-func GetRoleTokenFromRSA(managedInstanceID string, publicKey string, instanceRegion string) awsrsa.AwsToken {
-	signer := awsrsa.BuildRsaSigner(managedInstanceID, publicKey, "AmazonSSM.RequestManagedInstanceRoleToken", "ssm", instanceRegion, time.Now(), 0, `{"Fingerprint":"90312ec8-c247-47eb-823f-ad6e8ae1fff5"}`)
+type InstanceInformation struct {
+	InstanceInformationList []struct {
+		ActivationID        string `json:"ActivationId"`
+		AgentVersion        string `json:"AgentVersion"`
+		AssociationOverview struct {
+			DetailedStatus                           string `json:"DetailedStatus"`
+			InstanceAssociationStatusAggregatedCount struct {
+				Failed  int `json:"Failed"`
+				Success int `json:"Success"`
+			} `json:"InstanceAssociationStatusAggregatedCount"`
+		} `json:"AssociationOverview"`
+		AssociationStatus            string  `json:"AssociationStatus"`
+		ComputerName                 string  `json:"ComputerName"`
+		IPAddress                    string  `json:"IPAddress"`
+		IamRole                      string  `json:"IamRole"`
+		InstanceID                   string  `json:"InstanceId"`
+		IsLatestVersion              bool    `json:"IsLatestVersion"`
+		LastAssociationExecutionDate float64 `json:"LastAssociationExecutionDate"`
+		LastPingDateTime             float64 `json:"LastPingDateTime"`
+		PingStatus                   string  `json:"PingStatus"`
+		PlatformName                 string  `json:"PlatformName"`
+		PlatformType                 string  `json:"PlatformType"`
+		PlatformVersion              string  `json:"PlatformVersion"`
+		RegistrationDate             float64 `json:"RegistrationDate"`
+		ResourceType                 string  `json:"ResourceType"`
+	} `json:"InstanceInformationList"`
+}
+
+func GetRoleTokenFromRSA(managedInstanceID string, publicKey string, instanceRegion string, fingerPrint string) (awsrsa.AwsToken, error) {
+	var data awsrsa.AwsToken
+
+	signer := awsrsa.BuildRsaSigner(managedInstanceID, publicKey, "AmazonSSM.RequestManagedInstanceRoleToken", "ssm", instanceRegion, time.Now(), 0, `{"Fingerprint":"`+fingerPrint+`"}`)
 	signer.SignRsa()
 
 	client := &http.Client{}
-	resp, _ := client.Do(signer.Request)
+	resp, err := client.Do(signer.Request)
+	if err != nil {
+		return data, err
+	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	var data awsrsa.AwsToken
-	err := decoder.Decode(&data)
+	err = decoder.Decode(&data)
 	if err != nil {
+		return data, err
 	}
-	return data
+	return data, err
 }
 
-func GetRunCommandMessages(tokens awsrsa.AwsToken, managedInstanceID string, instanceRegion string) awsrsa.DocMessage {
+func GetRunCommandMessages(tokens awsrsa.AwsToken, managedInstanceID string, instanceRegion string) (awsrsa.DocMessage, error) {
+	var data awsrsa.DocMessage
+
 	req, body := awsauth.BuildRequest("ec2messages", instanceRegion, `{"Destination":"`+managedInstanceID+`","MessagesRequestId":"`+awsrsa.UniqueID()+`","VisibilityTimeoutInSeconds":10}`, "EC2WindowsMessageDeliveryService.GetMessages")
 
 	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
-	signer.Presign(req, body, "ec2messages", "us-east-1", 0, time.Now())
+	signer.Presign(req, body, "ec2messages", instanceRegion, 0, time.Now())
 
-	client := &http.Client{}
-	resp, _ := client.Do(req)
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return data, err
+	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
-	var data awsrsa.DocMessage
 	decoder.Decode(&data)
-	return data
+	return data, err
 }
 
 func SendCommandOutput(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string, cmdOutput string, instanceRegion string) string {
@@ -64,7 +103,10 @@ func SendCommandOutput(tokens awsrsa.AwsToken, managedInstanceID string, cmdID s
 	signer.Presign(req, body, "ec2messages", instanceRegion, 0, time.Now())
 
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error"
+	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
@@ -80,7 +122,10 @@ func AcknowledgeCommand(tokens awsrsa.AwsToken, managedInstanceID string, cmdID 
 	signer.Presign(req, body, "ec2messages", instanceRegion, 0, time.Now())
 
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error"
+	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
@@ -93,7 +138,7 @@ func AcknowledgeCommand(tokens awsrsa.AwsToken, managedInstanceID string, cmdID 
 func GetOutboundIP() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
-		log.Fatal(err)
+		return net.IP(err.Error())
 	}
 	defer conn.Close()
 
@@ -128,12 +173,37 @@ func UpdateInstanceInformation(tokens awsrsa.AwsToken, managedInstanceID string,
 	signer.Presign(req, body, "ssm", instanceRegion, 0, time.Now())
 
 	client := &http.Client{}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return "error"
+	}
 	defer resp.Body.Close()
 
 	decoder := json.NewDecoder(resp.Body)
 	var data awsrsa.DocMessage
 	decoder.Decode(&data)
 	return "OK"
+
+}
+
+func GetInstanceInformation(tokens awsrsa.AwsToken, managedInstanceID string, instanceRegion string) InstanceInformation {
+	var data InstanceInformation
+
+	req, body := awsauth.BuildRequest("ssm", instanceRegion, `{"Filters": [{"Key": "InstanceIds", "Values": ["`+managedInstanceID+`"]}]}`, "AmazonSSM.DescribeInstanceInformation")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ssm", instanceRegion, 0, time.Now())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return data
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	decoder.Decode(&data)
+	fmt.Println(data)
+	return data
 
 }

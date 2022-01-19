@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,10 +15,24 @@ import (
 var completeFile []FileParts
 
 type FileParts struct {
-	CurrentCount string
-	TotalCount   string
+	CurrentCount int
+	TotalCount   int
 	Filename     string
 	FileData     string
+}
+
+type File []FileParts
+
+func (s File) Len() int {
+	return len(s)
+}
+
+func (s File) Less(i, j int) bool {
+	return s[i].CurrentCount < s[j].CurrentCount
+}
+
+func (s File) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 //Recieve each piece of the file split it by colon into a FileParts object.
@@ -25,13 +40,14 @@ type FileParts struct {
 func RecieveFile(payload awsssm.SendCommandPayload) {
 
 	s := strings.Split(payload.OutputS3KeyPrefix, ":")
-
 	//Make sure we have a correctly formatted payload
 	if len(s) == 4 {
+		ccnt, _ := strconv.Atoi(s[0])
+		tcnt, _ := strconv.Atoi(s[1])
 
 		file := FileParts{
-			CurrentCount: s[0],
-			TotalCount:   s[1],
+			CurrentCount: ccnt,
+			TotalCount:   tcnt,
 			Filename:     s[2],
 			FileData:     s[3],
 		}
@@ -47,22 +63,22 @@ func RecieveFile(payload awsssm.SendCommandPayload) {
 //Check if we have all of the pieces to the file
 func CheckFile(file FileParts) {
 	var singleFile []FileParts
-	tc, _ := strconv.Atoi(file.TotalCount)
 
 	for _, v := range completeFile {
 		if v.Filename == file.Filename {
 			singleFile = append(singleFile, v)
-			if len(singleFile) == tc {
+			if len(singleFile) == file.TotalCount {
+				fmt.Println(singleFile)
 				SaveFile(singleFile, v.Filename)
-				fmt.Println("Uploaded")
 			}
 		}
 	}
 }
 
 //Save the file to the /tmp folder
-func SaveFile(file []FileParts, filename string) {
+func SaveFile(file File, filename string) {
 	var pieces []string
+	sort.Sort(file)
 
 	for _, v := range file {
 		pieces = append(pieces, v.FileData)
@@ -81,5 +97,5 @@ func SaveFile(file []FileParts, filename string) {
 
 //Clear file from []FileParts
 func ClearFile() {
-	//completeFile = []FileParts{}
+	completeFile = []FileParts{}
 }

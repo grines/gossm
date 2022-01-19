@@ -24,11 +24,10 @@ import (
 )
 
 type AwsToken struct {
-	AccessKeyID         string `json:"AccessKeyId"`
-	SecretAccessKey     string `json:"SecretAccessKey"`
-	SessionToken        string `json:"SessionToken"`
-	TokenExpirationDate int    `json:"TokenExpirationDate"`
-	UpdateKeyPair       bool   `json:"UpdateKeyPair"`
+	AccessKeyID     string `json:"AccessKeyId"`
+	SecretAccessKey string `json:"SecretAccessKey"`
+	SessionToken    string `json:"SessionToken"`
+	UpdateKeyPair   bool   `json:"UpdateKeyPair"`
 }
 
 type DocMessage struct {

