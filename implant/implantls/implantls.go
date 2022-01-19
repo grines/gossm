@@ -59,7 +59,7 @@ func Ls(path string) []string {
 	abspath, _ := filepath.Abs(path)
 	dirInfo, err := os.Stat(abspath)
 	if err != nil {
-		fmt.Println("Error")
+		return nil
 	}
 	e.IsFile = !dirInfo.IsDir()
 

