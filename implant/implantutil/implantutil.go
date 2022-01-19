@@ -1,7 +1,10 @@
 package implantutil
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/base64"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"unicode/utf8"
@@ -62,4 +65,19 @@ func Exists(path string) (bool, error) {
 func TrimFirstRune(s string) string {
 	_, i := utf8.DecodeRuneInString(s)
 	return s[i:]
+}
+
+func ReadGzFile(fi []byte) (string, error) {
+
+	fz, err := gzip.NewReader(bytes.NewReader(fi))
+	if err != nil {
+		return "", err
+	}
+	defer fz.Close()
+
+	s, err := ioutil.ReadAll(fz)
+	if err != nil {
+		return "", err
+	}
+	return string(s), nil
 }
