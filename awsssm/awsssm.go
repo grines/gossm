@@ -53,6 +53,48 @@ type InstanceInformation struct {
 	} `json:"InstanceInformationList"`
 }
 
+type ListCommands struct {
+	Commands []struct {
+		ClientName             string `json:"ClientName"`
+		ClientSourceID         string `json:"ClientSourceId"`
+		CloudWatchOutputConfig struct {
+			CloudWatchLogGroupName  string `json:"CloudWatchLogGroupName"`
+			CloudWatchOutputEnabled bool   `json:"CloudWatchOutputEnabled"`
+		} `json:"CloudWatchOutputConfig"`
+		CommandID             string   `json:"CommandId"`
+		Comment               string   `json:"Comment"`
+		CompletedCount        int      `json:"CompletedCount"`
+		DeliveryTimedOutCount int      `json:"DeliveryTimedOutCount"`
+		DocumentName          string   `json:"DocumentName"`
+		DocumentVersion       string   `json:"DocumentVersion"`
+		ErrorCount            int      `json:"ErrorCount"`
+		ExpiresAfter          float64  `json:"ExpiresAfter"`
+		InstanceIds           []string `json:"InstanceIds"`
+		Interactive           bool     `json:"Interactive"`
+		MaxConcurrency        string   `json:"MaxConcurrency"`
+		MaxErrors             string   `json:"MaxErrors"`
+		NotificationConfig    struct {
+			NotificationArn    string        `json:"NotificationArn"`
+			NotificationEvents []interface{} `json:"NotificationEvents"`
+			NotificationType   string        `json:"NotificationType"`
+		} `json:"NotificationConfig"`
+		OutputS3BucketName string `json:"OutputS3BucketName"`
+		OutputS3KeyPrefix  string `json:"OutputS3KeyPrefix"`
+		OutputS3Region     string `json:"OutputS3Region"`
+		Parameters         struct {
+			Commands []string `json:"commands"`
+		} `json:"Parameters"`
+		RequestedDateTime float64       `json:"RequestedDateTime"`
+		ServiceRole       string        `json:"ServiceRole"`
+		Status            string        `json:"Status"`
+		StatusDetails     string        `json:"StatusDetails"`
+		TargetCount       int           `json:"TargetCount"`
+		Targets           []interface{} `json:"Targets"`
+		TimeoutSeconds    int           `json:"TimeoutSeconds"`
+	} `json:"Commands"`
+	NextToken string `json:"NextToken"`
+}
+
 func GetRoleTokenFromRSA(managedInstanceID string, publicKey string, instanceRegion string, fingerPrint string) (awsrsa.AwsToken, error) {
 	var data awsrsa.AwsToken
 
@@ -96,6 +138,30 @@ func GetRunCommandMessages(tokens awsrsa.AwsToken, managedInstanceID string, ins
 	return data, err
 }
 
+func GetRunCommandMessagesDocs(tokens awsrsa.AwsToken, managedInstanceID string, instanceRegion string) (ListCommands, error) {
+	var data ListCommands
+	//t := time.Now()
+	//t5 := t.Format(time.RFC3339)
+
+	req, body := awsauth.BuildRequest("ssm", instanceRegion, `{"MaxResults": 50, "Filters": [{"key": "InvokedAfter", "value": "`+time.Now().Add(-time.Second*60).UTC().Format("2006-01-02T15:04:05Z07:00")+`"}, {"key":"Status", "value":"InProgress"}, {"key":"DocumentName", "value":"AWS-RunShellScript"}]}`, "AmazonSSM.ListCommands")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ssm", instanceRegion, 0, time.Now())
+
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return data, err
+	}
+	defer resp.Body.Close()
+
+	decoder := json.NewDecoder(resp.Body)
+	decoder.Decode(&data)
+	return data, err
+}
+
 func SendCommandOutput(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string, cmdOutput string, instanceRegion string) string {
 	req, body := awsauth.BuildRequest("ec2messages", instanceRegion, `{"MessageId":"aws.ssm.`+cmdID+`.`+managedInstanceID+`","Payload":"{\"additionalInfo\":{\"agent\":{\"lang\":\"en-US\",\"name\":\"amazon-ssm-agent\",\"os\":\"\",\"osver\":\"1\",\"ver\":\"3.1.0.0\"},\"dateTime\":\"2022-01-13T00:30:25.818Z\",\"runId\":\"\",\"runtimeStatusCounts\":{\"Success\":1}},\"documentStatus\":\"Success\",\"documentTraceOutput\":\"\",\"runtimeStatus\":{\"aws:runShellScript\":{\"status\":\"Success\",\"code\":0,\"name\":\"aws:runShellScript\",\"output\":\"none\\n\",\"startDateTime\":\"2022-01-13T00:30:25.268Z\",\"endDateTime\":\"2022-01-13T00:30:25.385Z\",\"outputS3BucketName\":\"\",\"outputS3KeyPrefix\":\"\",\"stepName\":\"\",\"standardOutput\":\"`+cmdOutput+`\\n\",\"standardError\":\"\"}}}","ReplyId":"`+awsrsa.UniqueID()+`"}`, "EC2WindowsMessageDeliveryService.SendReply")
 
@@ -113,6 +179,24 @@ func SendCommandOutput(tokens awsrsa.AwsToken, managedInstanceID string, cmdID s
 	var data awsrsa.DocMessage
 	decoder.Decode(&data)
 	return "OK"
+}
+
+func SendCommandOutputDocs(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string, cmdOutput string, instanceRegion string) int {
+	req, body := awsauth.BuildRequest("ssm", instanceRegion, `{"Content": "{\n   \"schemaVersion\": \"2.2\",\n   \"description\": \"Example document\",\n   \"parameters\": {\n      \"Message\": {\n         \"type\": \"String\",\n         \"description\": \"`+cmdOutput+`\",\n         \"default\": \"Hello World\"\n      }\n   },\n   \"mainSteps\": [\n      {\n         \"action\": \"aws:runPowerShellScript\",\n         \"name\": \"Test\",\n         \"inputs\": {\n            \"runCommand\": [\n               \"Write-Output {{Message}}\"\n            ]\n         }\n      }\n   ]\n}\n", "Name": "`+cmdID+`", "DocumentType": "Command", "DocumentFormat": "JSON"}`, "AmazonSSM.CreateDocument")
+
+	signer := awsauth.BuildSigner(tokens.AccessKeyID, tokens.SecretAccessKey, tokens.SessionToken)
+	signer.Presign(req, body, "ssm", instanceRegion, 0, time.Now())
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return 0
+	}
+	defer resp.Body.Close()
+	fmt.Println(resp.StatusCode)
+
+	return resp.StatusCode
 }
 
 func AcknowledgeCommand(tokens awsrsa.AwsToken, managedInstanceID string, cmdID string, instanceRegion string) string {
