@@ -1,5 +1,5 @@
 # gossm
-Abuses AWS SSM Channels for C2 communication
+Abuses AWS SSM Channels for C2 communication. Project is not maintained and was used during a red team op.
 
 # Setup
 export GO111MODULE=off
