@@ -1,4 +1,5 @@
-# ssmmm
+# gossm
+Abuses AWS SSM Channels for C2 communication
 
 # Setup
 export GO111MODULE=off
